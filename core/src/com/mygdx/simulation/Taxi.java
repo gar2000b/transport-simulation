@@ -3,16 +3,17 @@ package com.mygdx.simulation;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
 /**
  * Created by Digilogue on 19/11/2016.
- *
+ * <p>
  * Taxi Class - represents the in-simulation sprite for the Aerial Taxi vehicle. Maintains state, update logic and
  * rendering.
- *
  */
 public class Taxi {
 
@@ -24,15 +25,26 @@ public class Taxi {
     private static final float LANDING_PYLON_RIGHT_X = 80;
     private static final float TAXI_LENGTH = 85;
     private static final float TAXI_HEIGHT = 43;
+    private static final float THRUSTER_FRAME_DURATION = 0.03F;
+    private static final int THRUSTER_TILE_WIDTH = 16;
+    private static final int THRUSTER_TILE_HEIGHT = 16;
 
-    private final Texture taxiLeft;
-    private final Texture taxiRight;
-    private final Texture taxiLeftGear;
-    private final Texture taxiRightGear;
+    private Texture taxiLeft;
+    private Texture taxiRight;
+    private Texture taxiLeftGear;
+    private Texture taxiRightGear;
+
+    Animation thrusterUpAnimation;
+    Animation thrusterDownAnimation;
+    Animation thrusterLeftAnimation;
+    Animation thrusterRightAnimation;
+
+    TextureRegion thrusterToRender;
+    TextureRegion[][] thrusterTextures;
 
     public enum Direction {UP, DOWN, LEFT, RIGHT}
 
-    private Direction direction = Direction.RIGHT;
+    private Direction thrusterDirection = Direction.RIGHT;
     private Direction leftRightFlag = Direction.RIGHT;
     private Direction travellingLeftRightDirection = Direction.RIGHT; // The current direction of travel.
     private Direction travellingUpDownDirection = Direction.DOWN; // The current direction of travel.
@@ -50,17 +62,75 @@ public class Taxi {
 
     private boolean landed = false;
 
+    private float thrusterAnimationTimer = 0;
+
     /**
-     * Constructor initialising sprite textures (taxiLeft, taxiRight, taxiLeftGear, taxiRightGear)
+     * Constructor fetching sprite assets (taxiLeft, taxiRight, taxiLeftGear, taxiRightGear) and setting up thruster
+     * animation.
      *
      * @param transportSimulation
      */
     public Taxi(TransportSimulation transportSimulation) {
+        getAssets(transportSimulation);
+        setupThrusterAnimation(transportSimulation);
+    }
 
+    private void getAssets(TransportSimulation transportSimulation) {
         taxiLeft = transportSimulation.getAssetManager().get("Taxi-Left.png", Texture.class);
         taxiRight = transportSimulation.getAssetManager().get("Taxi-Right.png", Texture.class);
         taxiLeftGear = transportSimulation.getAssetManager().get("Taxi-Left-Gear.png", Texture.class);
         taxiRightGear = transportSimulation.getAssetManager().get("Taxi-Right-Gear.png", Texture.class);
+    }
+
+    private void setupThrusterAnimation(TransportSimulation transportSimulation) {
+        setupUpThrusterAnimation(transportSimulation);
+        setupDownThrusterAnimation(transportSimulation);
+        setupLeftThrusterAnimation(transportSimulation);
+        setupRightThrusterAnimation(transportSimulation);
+
+    }
+
+    private void setupRightThrusterAnimation(TransportSimulation transportSimulation) {
+        TextureRegion thrusterRight = new TextureRegion(transportSimulation.getAssetManager().get("thruster-right.png",
+                Texture
+                        .class));
+        thrusterTextures = new TextureRegion(thrusterRight).split(THRUSTER_TILE_WIDTH,
+                THRUSTER_TILE_HEIGHT);
+        thrusterRightAnimation = new Animation(THRUSTER_FRAME_DURATION, thrusterTextures[0][0],
+                thrusterTextures[0][1]);
+        thrusterRightAnimation.setPlayMode(Animation.PlayMode.LOOP);
+    }
+
+    private void setupLeftThrusterAnimation(TransportSimulation transportSimulation) {
+        TextureRegion thrusterLeft = new TextureRegion(transportSimulation.getAssetManager().get("thruster-left.png",
+                Texture
+                        .class));
+        thrusterTextures = new TextureRegion(thrusterLeft).split(THRUSTER_TILE_WIDTH,
+                THRUSTER_TILE_HEIGHT);
+        thrusterLeftAnimation = new Animation(THRUSTER_FRAME_DURATION, thrusterTextures[0][0],
+                thrusterTextures[0][1]);
+        thrusterLeftAnimation.setPlayMode(Animation.PlayMode.LOOP);
+    }
+
+    private void setupDownThrusterAnimation(TransportSimulation transportSimulation) {
+        TextureRegion thrusterDown = new TextureRegion(transportSimulation.getAssetManager().get("thruster-down.png",
+                Texture
+                        .class));
+        thrusterTextures = new TextureRegion(thrusterDown).split(THRUSTER_TILE_WIDTH,
+                THRUSTER_TILE_HEIGHT);
+        thrusterDownAnimation = new Animation(THRUSTER_FRAME_DURATION, thrusterTextures[0][0],
+                thrusterTextures[0][1]);
+        thrusterDownAnimation.setPlayMode(Animation.PlayMode.LOOP);
+    }
+
+    private void setupUpThrusterAnimation(TransportSimulation transportSimulation) {
+        TextureRegion thrusterUp = new TextureRegion(transportSimulation.getAssetManager().get("thruster-up.png", Texture
+                .class));
+        thrusterTextures = new TextureRegion(thrusterUp).split(THRUSTER_TILE_WIDTH,
+                THRUSTER_TILE_HEIGHT);
+        thrusterUpAnimation = new Animation(THRUSTER_FRAME_DURATION, thrusterTextures[0][0],
+                thrusterTextures[0][1]);
+        thrusterUpAnimation.setPlayMode(Animation.PlayMode.LOOP);
     }
 
     /**
@@ -70,6 +140,11 @@ public class Taxi {
      * @param batch
      */
     public void draw(Batch batch) {
+        drawTaxi(batch);
+        drawThrusters(batch);
+    }
+
+    private void drawTaxi(Batch batch) {
         if (leftRightFlag == Direction.LEFT) {
             if (landingGear)
                 batch.draw(taxiLeftGear, Math.round(x), Math.round(y));
@@ -81,6 +156,30 @@ public class Taxi {
                 batch.draw(taxiRightGear, Math.round(x), Math.round(y));
             else
                 batch.draw(taxiRight, Math.round(x), Math.round(y));
+        }
+    }
+
+    private void drawThrusters(Batch batch) {
+        if (thrusterDirection == Direction.UP) {
+            thrusterToRender = thrusterUpAnimation.getKeyFrame(thrusterAnimationTimer);
+            batch.draw(thrusterToRender, Math.round(x) + (TAXI_LENGTH / 2) - (THRUSTER_TILE_WIDTH / 2), Math.round(y) -
+                    5);
+        }
+
+        if (thrusterDirection == Direction.DOWN) {
+            thrusterToRender = thrusterDownAnimation.getKeyFrame(thrusterAnimationTimer);
+            batch.draw(thrusterToRender, Math.round(x) + (TAXI_LENGTH / 2) - (THRUSTER_TILE_WIDTH / 2), Math.round(y) +
+                    43);
+        }
+
+        if (thrusterDirection == Direction.LEFT) {
+            thrusterToRender = thrusterLeftAnimation.getKeyFrame(thrusterAnimationTimer);
+            batch.draw(thrusterToRender, Math.round(x) + TAXI_LENGTH, Math.round(y) + 20);
+        }
+
+        if (thrusterDirection == Direction.RIGHT) {
+            thrusterToRender = thrusterRightAnimation.getKeyFrame(thrusterAnimationTimer);
+            batch.draw(thrusterToRender, Math.round(x) - 15, Math.round(y) + 20);
         }
     }
 
@@ -96,6 +195,7 @@ public class Taxi {
      */
     public void update(float delta, Array<Rectangle> platforms, float worldWidth, float worldHeight) {
 
+        updateAnimationTimers(delta);
         processInput();
         processCollisionWithPlatforms(platforms);
         workOutTravellingDirection();
@@ -103,6 +203,10 @@ public class Taxi {
         processDive();
 
         setPosition(x + xSpeed, y + ySpeed);
+    }
+
+    private void updateAnimationTimers(float delta) {
+        thrusterAnimationTimer += delta;
     }
 
     /**
@@ -147,24 +251,27 @@ public class Taxi {
      * Processes user input and updates taxi's x, y, speed and direction states accordingly.
      */
     private void processInput() {
+
+        thrusterDirection = null;
+
         Input input = Gdx.input;
         if (input.isKeyPressed(Input.Keys.RIGHT)) {
-            direction = Direction.RIGHT;
+            thrusterDirection = Direction.RIGHT;
             leftRightFlag = Direction.RIGHT;
             xSpeed += HORIZ_ACCEL;
         }
         if (input.isKeyPressed(Input.Keys.LEFT)) {
-            direction = Direction.LEFT;
+            thrusterDirection = Direction.LEFT;
             leftRightFlag = Direction.LEFT;
             xSpeed -= HORIZ_ACCEL;
         }
         if (input.isKeyPressed(Input.Keys.UP)) {
-            direction = Direction.UP;
+            thrusterDirection = Direction.UP;
             ySpeed += THRUST_UP_ACCEL;
             landed = false;
         }
         if (input.isKeyPressed(Input.Keys.DOWN)) {
-            direction = Direction.DOWN;
+            thrusterDirection = Direction.DOWN;
             ySpeed -= THRUST_DOWN_ACCEL;
         }
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {

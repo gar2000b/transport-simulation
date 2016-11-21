@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -52,6 +53,10 @@ public class LoadingScreen extends ScreenAdapter {
         transportSimulation.getAssetManager().load("Taxi-Left-Gear.png", Texture.class);
         transportSimulation.getAssetManager().load("Taxi-Right-Gear.png", Texture.class);
         transportSimulation.getAssetManager().load("simulation.tmx", TiledMap.class);
+        transportSimulation.getAssetManager().load("thruster-up.png", Texture.class);
+        transportSimulation.getAssetManager().load("thruster-down.png", Texture.class);
+        transportSimulation.getAssetManager().load("thruster-left.png", Texture.class);
+        transportSimulation.getAssetManager().load("thruster-right.png", Texture.class);
     }
 
     @Override
