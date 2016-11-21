@@ -15,7 +15,6 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 /**
@@ -26,8 +25,8 @@ public class GameScreen extends ScreenAdapter {
     private static final float WORLD_WIDTH = 8640;
     private static final float WORLD_HEIGHT = 6480;
 
-    private static final float SCREEN_WIDTH = 1024;
-    private static final float SCREEN_HEIGHT = 768;
+    private static final float SCREEN_WIDTH = 1600;
+    private static final float SCREEN_HEIGHT = 900;
 
     private final TransportSimulation transportSimulation;
     private Viewport viewport;
@@ -62,7 +61,7 @@ public class GameScreen extends ScreenAdapter {
         orthogonalTiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap, batch);
         // orthogonalTiledMapRenderer.setView(camera);
 
-        camera.position.set(512, 3240, camera.position.z);
+        camera.position.set(SCREEN_WIDTH / 2, WORLD_HEIGHT / 2, camera.position.z);
         camera.update();
         orthogonalTiledMapRenderer.setView(camera);
 

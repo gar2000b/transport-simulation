@@ -16,8 +16,8 @@ import com.badlogic.gdx.utils.viewport.Viewport;
  */
 public class LoadingScreen extends ScreenAdapter {
 
-    private static final float WORLD_WIDTH = 1024;
-    private static final float WORLD_HEIGHT = 768;
+    private static final float WORLD_WIDTH = 1600;
+    private static final float WORLD_HEIGHT = 900;
     private static final float PROGRESS_BAR_WIDTH = 100;
     private static final float PROGRESS_BAR_HEIGHT = 25;
 
