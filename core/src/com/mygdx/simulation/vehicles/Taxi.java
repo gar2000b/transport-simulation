@@ -1,4 +1,4 @@
-package com.mygdx.simulation;
+package com.mygdx.simulation.vehicles;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
+import com.mygdx.simulation.TransportSimulation;
 
 /**
  * Created by Digilogue on 19/11/2016.
@@ -44,7 +45,7 @@ public class Taxi {
 
     public enum Direction {UP, DOWN, LEFT, RIGHT}
 
-    private Direction thrusterDirection = Direction.RIGHT;
+    // private Direction thrusterDirection = Direction.RIGHT;
     private Direction leftRightFlag = Direction.RIGHT;
     private Direction travellingLeftRightDirection = Direction.RIGHT; // The current direction of travel.
     private Direction travellingUpDownDirection = Direction.DOWN; // The current direction of travel.
@@ -63,6 +64,11 @@ public class Taxi {
     private boolean landed = false;
 
     private float thrusterAnimationTimer = 0;
+
+    private boolean thrusterDirectionUp = false;
+    private boolean thrusterDirectionDown = false;
+    private boolean thrusterDirectionLeft = false;
+    private boolean thrusterDirectionRight = false;
 
     /**
      * Constructor fetching sprite assets (taxiLeft, taxiRight, taxiLeftGear, taxiRightGear) and setting up thruster
@@ -87,7 +93,6 @@ public class Taxi {
         setupDownThrusterAnimation(transportSimulation);
         setupLeftThrusterAnimation(transportSimulation);
         setupRightThrusterAnimation(transportSimulation);
-
     }
 
     private void setupRightThrusterAnimation(TransportSimulation transportSimulation) {
@@ -160,24 +165,24 @@ public class Taxi {
     }
 
     private void drawThrusters(Batch batch) {
-        if (thrusterDirection == Direction.UP) {
+        if (thrusterDirectionUp) {
             thrusterToRender = thrusterUpAnimation.getKeyFrame(thrusterAnimationTimer);
             batch.draw(thrusterToRender, Math.round(x) + (TAXI_LENGTH / 2) - (THRUSTER_TILE_WIDTH / 2), Math.round(y) -
                     5);
         }
 
-        if (thrusterDirection == Direction.DOWN) {
+        if (thrusterDirectionDown) {
             thrusterToRender = thrusterDownAnimation.getKeyFrame(thrusterAnimationTimer);
             batch.draw(thrusterToRender, Math.round(x) + (TAXI_LENGTH / 2) - (THRUSTER_TILE_WIDTH / 2), Math.round(y) +
                     43);
         }
 
-        if (thrusterDirection == Direction.LEFT) {
+        if (thrusterDirectionLeft) {
             thrusterToRender = thrusterLeftAnimation.getKeyFrame(thrusterAnimationTimer);
             batch.draw(thrusterToRender, Math.round(x) + TAXI_LENGTH, Math.round(y) + 20);
         }
 
-        if (thrusterDirection == Direction.RIGHT) {
+        if (thrusterDirectionRight) {
             thrusterToRender = thrusterRightAnimation.getKeyFrame(thrusterAnimationTimer);
             batch.draw(thrusterToRender, Math.round(x) - 15, Math.round(y) + 20);
         }
@@ -252,26 +257,29 @@ public class Taxi {
      */
     private void processInput() {
 
-        thrusterDirection = null;
+        thrusterDirectionUp = false;
+        thrusterDirectionDown = false;
+        thrusterDirectionLeft = false;
+        thrusterDirectionRight = false;
 
         Input input = Gdx.input;
         if (input.isKeyPressed(Input.Keys.RIGHT)) {
-            thrusterDirection = Direction.RIGHT;
+            thrusterDirectionRight = true;
             leftRightFlag = Direction.RIGHT;
             xSpeed += HORIZ_ACCEL;
         }
         if (input.isKeyPressed(Input.Keys.LEFT)) {
-            thrusterDirection = Direction.LEFT;
+            thrusterDirectionLeft = true;
             leftRightFlag = Direction.LEFT;
             xSpeed -= HORIZ_ACCEL;
         }
         if (input.isKeyPressed(Input.Keys.UP)) {
-            thrusterDirection = Direction.UP;
+            thrusterDirectionUp = true;
             ySpeed += THRUST_UP_ACCEL;
             landed = false;
         }
         if (input.isKeyPressed(Input.Keys.DOWN)) {
-            thrusterDirection = Direction.DOWN;
+            thrusterDirectionDown = true;
             ySpeed -= THRUST_DOWN_ACCEL;
         }
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
