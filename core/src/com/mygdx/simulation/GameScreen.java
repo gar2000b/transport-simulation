@@ -18,6 +18,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.simulation.travellers.TravellerA;
+import com.mygdx.simulation.travellers.TravellerB;
+import com.mygdx.simulation.travellers.TravellerC;
 import com.mygdx.simulation.vehicles.Taxi;
 
 /**
@@ -39,6 +41,8 @@ public class GameScreen extends ScreenAdapter {
     private OrthogonalTiledMapRenderer orthogonalTiledMapRenderer;
     private Taxi taxi;
     private TravellerA travellerA;
+    private TravellerB travellerB;
+    private TravellerC travellerC;
     private Array<Rectangle> platforms = new Array<Rectangle>();
     private Array<MapLayer> mapLayers = new Array<MapLayer>();
     private Array<Boolean> mapLayersOnOff = new Array<Boolean>();
@@ -74,11 +78,21 @@ public class GameScreen extends ScreenAdapter {
 
         taxi = new Taxi(transportSimulation);
         travellerA = new TravellerA(transportSimulation);
+        travellerB = new TravellerB(transportSimulation);
+        travellerC = new TravellerC(transportSimulation);
 
         buildPlatforms();
         batch.setProjectionMatrix(camera.combined);
 
         createMapLayerArray();
+
+        Rectangle testGround = getTestGround();
+        travellerA.setTravellerOnGround(testGround);
+        travellerA.setWalk(true);
+        travellerB.setTravellerOnGround(testGround);
+        travellerB.setWalk(true);
+        travellerC.setTravellerOnGround(testGround);
+        travellerC.setWalk(true);
     }
 
     @Override
@@ -92,6 +106,8 @@ public class GameScreen extends ScreenAdapter {
     private void update(float delta) {
         taxi.update(delta, platforms, WORLD_WIDTH, WORLD_HEIGHT);
         travellerA.update(delta);
+        travellerB.update(delta);
+        travellerC.update(delta);
         camera.update();
         orthogonalTiledMapRenderer.setView(camera);
         updateCamera();
@@ -105,6 +121,8 @@ public class GameScreen extends ScreenAdapter {
         batch.begin();
         taxi.draw(batch);
         travellerA.draw(batch);
+        travellerB.draw(batch);
+        travellerC.draw(batch);
         batch.end();
     }
 
@@ -122,11 +140,17 @@ public class GameScreen extends ScreenAdapter {
         }
     }
 
-    private void updateCamera() {
+    private Rectangle getStreetLevelGround() {
+        MapObjects objects = tiledMap.getLayers().get("Ground").getObjects();
+        return ((RectangleMapObject) objects.get("Street-Level-Ground")).getRectangle();
+    }
 
-//        TiledMapTileLayer tiledMapTileLayer = (TiledMapTileLayer) tiledMap.getLayers().get(0);
-//        float levelWidth = tiledMapTileLayer.getWidth() * tiledMapTileLayer.getTileWidth();
-//        float levelHeight = tiledMapTileLayer.getHeight() * tiledMapTileLayer.getTileHeight();
+    private Rectangle getTestGround() {
+        MapObjects objects = tiledMap.getLayers().get("Ground").getObjects();
+        return ((RectangleMapObject) objects.get("Test-Ground")).getRectangle();
+    }
+
+    private void updateCamera() {
 
         if ((taxi.getX() > SCREEN_WIDTH * 0.70f) && (taxi.getX() < WORLD_WIDTH - (SCREEN_WIDTH * 0.30f)) && taxi
                 .getTravellingLeftRightDirection() == Taxi.Direction.RIGHT && taxi.getX() >

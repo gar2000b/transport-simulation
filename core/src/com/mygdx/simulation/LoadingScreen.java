@@ -58,6 +58,8 @@ public class LoadingScreen extends ScreenAdapter {
         transportSimulation.getAssetManager().load("thruster-left.png", Texture.class);
         transportSimulation.getAssetManager().load("thruster-right.png", Texture.class);
         transportSimulation.getAssetManager().load("traveller-a.png", Texture.class);
+        transportSimulation.getAssetManager().load("traveller-b.png", Texture.class);
+        transportSimulation.getAssetManager().load("traveller-c.png", Texture.class);
     }
 
     @Override

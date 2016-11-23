@@ -6,26 +6,25 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.mygdx.simulation.TransportSimulation;
 
 /**
- * Created by Digilogue on 21/11/2016.
+ * Created by Digilogue on 23/11/2016.
  */
-public class TravellerA extends Traveller {
+public class TravellerB extends Traveller {
     /**
      * Constructor basically builds up the travellers animation sequence from it's sprite sheet / image.
      *
      * @param transportSimulation
      */
-    public TravellerA(TransportSimulation transportSimulation) {
+    public TravellerB(TransportSimulation transportSimulation) {
 
-        tileWidth = 82;
-        tileHeight = 95;
+        tileWidth = 34;
+        tileHeight = 60;
 
-        TextureRegion traveller = new TextureRegion(transportSimulation.getAssetManager().get("traveller-a.png",
+        TextureRegion traveller = new TextureRegion(transportSimulation.getAssetManager().get("traveller-b.png",
                 Texture.class));
         travellerTextures = new TextureRegion(traveller).split(tileWidth, tileHeight);
 
-        travellerWalkingAnimation = new Animation(FRAME_DURATION, travellerTextures[5][7], travellerTextures[5][8],
-                travellerTextures[5][9], travellerTextures[6][0], travellerTextures[6][1], travellerTextures[6][2],
-                travellerTextures[6][3], travellerTextures[6][4]);
+        travellerWalkingAnimation = new Animation(FRAME_DURATION, travellerTextures[0][1], travellerTextures[0][2],
+                travellerTextures[0][3], travellerTextures[0][4], travellerTextures[0][5], travellerTextures[0][6]);
         travellerWalkingAnimation.setPlayMode(Animation.PlayMode.LOOP);
     }
 }
