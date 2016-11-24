@@ -56,6 +56,7 @@ public class GameScreen extends ScreenAdapter {
     private SimulationMode simulationMode = SimulationMode.TAXI;
 
     private boolean displayAllLayersFlag = true;
+    private boolean pauseFlag = false;
 
     public GameScreen(TransportSimulation transportSimulation) {
         this.transportSimulation = transportSimulation;
@@ -140,13 +141,16 @@ public class GameScreen extends ScreenAdapter {
      * @param delta
      */
     private void update(float delta) {
-        updateTaxi(delta);
-        updateTravellers(delta);
+        if (!pauseFlag) {
+            updateTaxi(delta);
+            updateTravellers(delta);
+        }
         camera.update();
         orthogonalTiledMapRenderer.setView(camera);
         updateCamera();
         toggleLayers();
         toggleMode();
+        togglePause();
     }
 
     private void updateTaxi(float delta) {
@@ -382,6 +386,13 @@ public class GameScreen extends ScreenAdapter {
             if (simulationMode == SimulationMode.PAN)
                 simulationMode = SimulationMode.TAXI;
             return;
+        }
+    }
+
+    private void togglePause() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.P)) {
+            pauseFlag = !pauseFlag;
         }
     }
 
