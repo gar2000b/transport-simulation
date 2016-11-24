@@ -43,15 +43,19 @@ public class Traveller {
                 if (x < currentGround.getX() + (currentGround.getWidth() - tileWidth)) {
                     x++;
                 } else {
-                    setWalk(false);
-                    travellerWalkingAnimation.setPlayMode(Animation.PlayMode.NORMAL);
+                    travellingDirection = Direction.LEFT;
+                    flipAnimationDirection();
+//                    setWalk(false);
+//                    travellerWalkingAnimation.setPlayMode(Animation.PlayMode.NORMAL);
                 }
             } else if (travellingDirection == TravellerA.Direction.LEFT) {
                 if (x > currentGround.getX()) {
                     x--;
                 } else {
-                    setWalk(false);
-                    travellerWalkingAnimation.setPlayMode(Animation.PlayMode.NORMAL);
+                    travellingDirection = Direction.RIGHT;
+                    flipAnimationDirection();
+//                    setWalk(false);
+//                    travellerWalkingAnimation.setPlayMode(Animation.PlayMode.NORMAL);
                 }
             }
         }
@@ -75,23 +79,30 @@ public class Traveller {
 
     public void setTravellerOnGround(Rectangle ground) {
 
+        if(ground.getX() == 4576.00) {
+            System.out.println("*** we found the special one. y: " + ground.getY());
+        }
         this.currentGround = ground;
         Random random = new Random();
         int answer = random.nextInt(1 - 0 + 1) + 0;
-        answer = 0; // TODO - remove when done.
+        // answer = 0; // TODO - remove when done.
 
         if (answer == 0) {
             travellingDirection = TravellerA.Direction.RIGHT;
             x = ground.getX();
             y = ground.getY();
         } else {
-            TextureRegion[] keyFrames = travellerWalkingAnimation.getKeyFrames();
-            for (int i = 0; i < keyFrames.length; i++) {
-                keyFrames[i].flip(true, false);
-            }
+            flipAnimationDirection();
             travellingDirection = TravellerA.Direction.LEFT;
-            x = ground.getWidth() - tileWidth;
+            x =  ground.getX() + ground.getWidth() - tileWidth;
             y = ground.getY();
+        }
+    }
+
+    private void flipAnimationDirection() {
+        TextureRegion[] keyFrames = travellerWalkingAnimation.getKeyFrames();
+        for (int i = 0; i < keyFrames.length; i++) {
+            keyFrames[i].flip(true, false);
         }
     }
 

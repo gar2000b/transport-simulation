@@ -17,15 +17,19 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.mygdx.simulation.travellers.Traveller;
 import com.mygdx.simulation.travellers.TravellerA;
 import com.mygdx.simulation.travellers.TravellerB;
 import com.mygdx.simulation.travellers.TravellerC;
+import com.mygdx.simulation.travellers.thread.TravellerInjector;
 import com.mygdx.simulation.vehicles.Taxi;
 
 /**
  * Created by Digilogue on 19/11/2016.
  */
 public class GameScreen extends ScreenAdapter {
+
+    private enum SimulationMode {PAN, TAXI}
 
     private static final float WORLD_WIDTH = 8640;
     private static final float WORLD_HEIGHT = 6480;
@@ -43,20 +47,18 @@ public class GameScreen extends ScreenAdapter {
     private TravellerA travellerA;
     private TravellerB travellerB;
     private TravellerC travellerC;
+    private Array<Traveller> travellers = new Array<Traveller>();
     private Array<Rectangle> platforms = new Array<Rectangle>();
+    private Array<Rectangle> grounds = new Array<Rectangle>();
+    private Array<Rectangle> podStops = new Array<Rectangle>();
     private Array<MapLayer> mapLayers = new Array<MapLayer>();
     private Array<Boolean> mapLayersOnOff = new Array<Boolean>();
+    private SimulationMode simulationMode = SimulationMode.TAXI;
 
     private boolean displayAllLayersFlag = true;
 
     public GameScreen(TransportSimulation transportSimulation) {
         this.transportSimulation = transportSimulation;
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        super.resize(width, height);
-        viewport.update(width, height);
     }
 
     @Override
@@ -77,22 +79,51 @@ public class GameScreen extends ScreenAdapter {
         orthogonalTiledMapRenderer.setView(camera);
 
         taxi = new Taxi(transportSimulation);
-        travellerA = new TravellerA(transportSimulation);
-        travellerB = new TravellerB(transportSimulation);
-        travellerC = new TravellerC(transportSimulation);
 
         buildPlatforms();
+        buildGrounds();
+        buildPodStops();
+
+        createTravellers();
+
+        System.out.println("count of platforms: " + platforms.size);
+        System.out.println("count of grounds: " + grounds.size);
+        System.out.println("count of pod stops: " + podStops.size);
+
         batch.setProjectionMatrix(camera.combined);
 
         createMapLayerArray();
+    }
 
-        Rectangle testGround = getTestGround();
-        travellerA.setTravellerOnGround(testGround);
-        travellerA.setWalk(true);
-        travellerB.setTravellerOnGround(testGround);
-        travellerB.setWalk(true);
-        travellerC.setTravellerOnGround(testGround);
-        travellerC.setWalk(true);
+    private void createTravellers() {
+
+        TravellerInjector travellerInjector = new TravellerInjector(grounds, travellers, transportSimulation);
+        travellerInjector.start();
+
+//        for (int i = 0; i < grounds.size; i++) {
+//            TravellerA travellerA = new TravellerA(transportSimulation);
+//            TravellerB travellerB = new TravellerB(transportSimulation);
+//            TravellerC travellerC = new TravellerC(transportSimulation);
+//
+//            travellerA.setTravellerOnGround(grounds.get(i));
+//            travellerA.setWalk(true);
+//            travellerB.setTravellerOnGround(grounds.get(i));
+//            travellerB.setWalk(true);
+//            travellerC.setTravellerOnGround(grounds.get(i));
+//            travellerC.setWalk(true);
+//
+//            travellers.add(travellerA);
+//            travellers.add(travellerB);
+//            travellers.add(travellerC);
+//        }
+//
+//        System.out.println("*** travellers size is: " + travellers.size);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        viewport.update(width, height);
     }
 
     @Override
@@ -103,15 +134,30 @@ public class GameScreen extends ScreenAdapter {
         draw();
     }
 
+    /**
+     * Simulation logic updates for all in-simulation objects (Taxis, Travellers, Pods...)
+     *
+     * @param delta
+     */
     private void update(float delta) {
-        taxi.update(delta, platforms, WORLD_WIDTH, WORLD_HEIGHT);
-        travellerA.update(delta);
-        travellerB.update(delta);
-        travellerC.update(delta);
+        updateTaxi(delta);
+        updateTravellers(delta);
         camera.update();
         orthogonalTiledMapRenderer.setView(camera);
         updateCamera();
         toggleLayers();
+        toggleMode();
+    }
+
+    private void updateTaxi(float delta) {
+        if (simulationMode == SimulationMode.TAXI)
+            taxi.update(delta, platforms, WORLD_WIDTH, WORLD_HEIGHT);
+    }
+
+    private void updateTravellers(float delta) {
+        for (int i = 0; i < travellers.size; i++) {
+            travellers.get(i).update(delta);
+        }
     }
 
 
@@ -120,9 +166,10 @@ public class GameScreen extends ScreenAdapter {
 
         batch.begin();
         taxi.draw(batch);
-        travellerA.draw(batch);
-        travellerB.draw(batch);
-        travellerC.draw(batch);
+        // System.out.println("travellers size is: " + travellers.size);
+        for (int i = 0; i < travellers.size; i++) {
+            travellers.get(i).draw(batch);
+        }
         batch.end();
     }
 
@@ -140,6 +187,24 @@ public class GameScreen extends ScreenAdapter {
         }
     }
 
+    private void buildGrounds() {
+        MapObjects objects = tiledMap.getLayers().get("Ground").getObjects();
+
+        for (MapObject object : objects) {
+            Rectangle rectangle = ((RectangleMapObject) object).getRectangle();
+            grounds.add(rectangle);
+        }
+    }
+
+    private void buildPodStops() {
+        MapObjects objects = tiledMap.getLayers().get("Pod-Stops").getObjects();
+
+        for (MapObject object : objects) {
+            Rectangle rectangle = ((RectangleMapObject) object).getRectangle();
+            podStops.add(rectangle);
+        }
+    }
+
     private Rectangle getStreetLevelGround() {
         MapObjects objects = tiledMap.getLayers().get("Ground").getObjects();
         return ((RectangleMapObject) objects.get("Street-Level-Ground")).getRectangle();
@@ -150,8 +215,83 @@ public class GameScreen extends ScreenAdapter {
         return ((RectangleMapObject) objects.get("Test-Ground")).getRectangle();
     }
 
+
+    /**
+     * This method will update the zoom depth and position of the camera relative to the mode that is set by the
+     * keyboard. If it's in taxi mode, it will trail / lead the taxi (controlled by the user) as appropriate. If it's
+     * in pan mode, the user can control the position of the camera with the cursor keys.
+     */
     private void updateCamera() {
 
+        if (simulationMode == SimulationMode.TAXI)
+            updateCameraTaxi();
+
+        if (simulationMode == SimulationMode.PAN)
+            updateCameraPan();
+
+        cameraZoom();
+    }
+
+    /**
+     * Camera position is updated relative to Taxi's position following it when it reaches the trailing distances
+     * of 30% of the screen width either side of the world.
+     * 30% || 40% || 30% - in other words, the camera won't trail / lead Taxi in either the middle 40% of the screen or
+     * the remaining 30% of the screen width at either of the boundaries of the world. It will trail / lead Taxi at
+     * 30% of the screen until the remaining 30% at the boundaries.
+     */
+    private void updateCameraTaxi() {
+        updateCameraTrailingTaxiTravellingRight();
+        updateCameraLeadingTaxiTravellingLeft();
+        updateCameraTrailingTaxiTravellingUp();
+        updateCameraLeadingTaxiTravellingDown();
+    }
+
+    /**
+     *
+     */
+    private void updateCameraPan() {
+        Input input = Gdx.input;
+        if (input.isKeyPressed(Input.Keys.LEFT))
+            camera.position.x = camera.position.x - 10;
+        if (input.isKeyPressed(Input.Keys.RIGHT))
+            camera.position.x = camera.position.x + 10;
+        if (input.isKeyPressed(Input.Keys.UP))
+            camera.position.y = camera.position.y + 10;
+        if (input.isKeyPressed(Input.Keys.DOWN))
+            camera.position.y = camera.position.y - 10;
+    }
+
+    /**
+     * Algorithm:
+     * <p>
+     * This will allow the camera to follow Taxi as it travels left:
+     * If taxis position is less than 30% of the screen width from the world width &
+     * Taxis position is greater than 30% of the screen width &
+     * Taxis direction is facing left &
+     * Taxis position is less than 20% of the screen width from the current camera position
+     * Then update the new camera position to lead +20% of the screen width from Taxis position.
+     */
+    private void updateCameraLeadingTaxiTravellingLeft() {
+        if ((taxi.getX() < WORLD_WIDTH - (SCREEN_WIDTH * 0.30f)) && (taxi.getX() > (SCREEN_WIDTH * 0.30f)) && taxi
+                .getTravellingLeftRightDirection() == Taxi.Direction.LEFT && taxi.getX() < (camera.position.x) -
+                (SCREEN_WIDTH * 0.20f)) {
+            camera.position.set(taxi.getX() + (SCREEN_WIDTH * 0.20f), camera.position.y, camera.position.z);
+            camera.update();
+            orthogonalTiledMapRenderer.setView(camera);
+        }
+    }
+
+    /**
+     * Algorithm:
+     * <p>
+     * This will allow the camera to follow Taxi as it travels right:
+     * If Taxis position is greater than 70% of the screen width &
+     * Taxis position is less than the last remaining 30% of the screen width of the world &
+     * Taxis direction is facing right &
+     * Taxis position is greater than 20% of the screen width from the current camera position
+     * Then update the new camera position to trail -20% of the screen width from Taxis position.
+     */
+    private void updateCameraTrailingTaxiTravellingRight() {
         if ((taxi.getX() > SCREEN_WIDTH * 0.70f) && (taxi.getX() < WORLD_WIDTH - (SCREEN_WIDTH * 0.30f)) && taxi
                 .getTravellingLeftRightDirection() == Taxi.Direction.RIGHT && taxi.getX() >
                 (camera.position.x) +
@@ -160,15 +300,25 @@ public class GameScreen extends ScreenAdapter {
             camera.update();
             orthogonalTiledMapRenderer.setView(camera);
         }
+    }
 
-        if ((taxi.getX() < WORLD_WIDTH - (SCREEN_WIDTH * 0.30f)) && (taxi.getX() > (SCREEN_WIDTH * 0.30f)) && taxi
-                .getTravellingLeftRightDirection() == Taxi.Direction.LEFT && taxi.getX() < (camera.position.x) -
-                (SCREEN_WIDTH * 0.20f)) {
-            camera.position.set(taxi.getX() + (SCREEN_WIDTH * 0.20f), camera.position.y, camera.position.z);
+    /**
+     * TODO - base it on updateCameraLeadingTaxiTravellingLeft()
+     */
+    private void updateCameraLeadingTaxiTravellingDown() {
+        if ((taxi.getY() < WORLD_HEIGHT - (SCREEN_HEIGHT * 0.30f)) && (taxi.getY() > (SCREEN_HEIGHT * 0.30f)) && taxi
+                .getTravellingUpDownDirection() == Taxi.Direction.DOWN && taxi.getY() < (camera.position.y) -
+                (SCREEN_HEIGHT * 0.20f)) {
+            camera.position.set(camera.position.x, taxi.getY() + (SCREEN_HEIGHT * 0.20f), camera.position.z);
             camera.update();
             orthogonalTiledMapRenderer.setView(camera);
         }
+    }
 
+    /**
+     * TODO - base it on updateCameraTrailingTaxiTravellingRight()
+     */
+    private void updateCameraTrailingTaxiTravellingUp() {
         if ((taxi.getY() > SCREEN_HEIGHT * 0.70f) && (taxi.getY() < WORLD_HEIGHT - (SCREEN_HEIGHT * 0.30f)) && taxi
                 .getTravellingUpDownDirection() == Taxi.Direction.UP && taxi.getY() >
                 (camera.position.y) +
@@ -177,15 +327,9 @@ public class GameScreen extends ScreenAdapter {
             camera.update();
             orthogonalTiledMapRenderer.setView(camera);
         }
+    }
 
-        if ((taxi.getY() < WORLD_HEIGHT - (SCREEN_HEIGHT * 0.30f)) && (taxi.getY() > (SCREEN_HEIGHT * 0.30f)) && taxi
-                .getTravellingUpDownDirection() == Taxi.Direction.DOWN && taxi.getY() < (camera.position.y) -
-                (SCREEN_HEIGHT * 0.20f)) {
-            camera.position.set(camera.position.x, taxi.getY() + (SCREEN_HEIGHT * 0.20f), camera.position.z);
-            camera.update();
-            orthogonalTiledMapRenderer.setView(camera);
-        }
-
+    private void cameraZoom() {
         Input input = Gdx.input;
         if (input.isKeyPressed(Input.Keys.S)) {
             camera.zoom += 0.02;
@@ -225,6 +369,19 @@ public class GameScreen extends ScreenAdapter {
             toggleAllLayersOnOff();
             removeAllLayersFromTiledMap();
             addLayersToTiledMap();
+        }
+    }
+
+    private void toggleMode() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.M)) {
+            if (simulationMode == SimulationMode.TAXI) {
+                simulationMode = SimulationMode.PAN;
+                return;
+            }
+            if (simulationMode == SimulationMode.PAN)
+                simulationMode = SimulationMode.TAXI;
+            return;
         }
     }
 
