@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.mygdx.simulation.TransportSimulation;
+import com.mygdx.simulation.World;
+import com.mygdx.simulation.dto.TransportationHubs;
 
 import java.util.Random;
 
@@ -15,13 +17,16 @@ import java.util.Random;
 public class Traveller {
 
     static final float FRAME_DURATION = 0.1F;
+    private final World world;
 
     TextureRegion[][] travellerTextures;
     Animation travellerWalkingAnimation;
     TextureRegion travellerToRender;
     Texture thoughtBubble;
+    Texture taxiBubble;
 
     Rectangle currentGround;
+    private Rectangle currentPlatform;
 
     private float animationTimer = 0;
     private float timeElapsed = 0;
@@ -30,7 +35,9 @@ public class Traveller {
 
     int tileWidth;
     int tileHeight;
+
     private int modeTime = 0;
+    private boolean walkingToTaxiPlatformFlag = false;
 
     public enum Direction {LEFT, RIGHT}
 
@@ -40,9 +47,10 @@ public class Traveller {
 
     private Mode mode = Mode.WALK;
 
-    public Traveller(TransportSimulation transportSimulation) {
-        thoughtBubble = transportSimulation.getAssetManager().get("thought-bubble.png",
-                Texture.class);
+    public Traveller(TransportSimulation transportSimulation, World world) {
+        thoughtBubble = transportSimulation.getAssetManager().get("thought-bubble.png", Texture.class);
+        taxiBubble = transportSimulation.getAssetManager().get("taxi-bubble.png", Texture.class);
+        this.world = world;
     }
 
     public void update(float delta) {
@@ -58,7 +66,51 @@ public class Traveller {
         if (getMode() == Mode.THINK)
             thinking();
 
+        if (getMode() == Mode.WALK_TO_TAXI_PLATFORM)
+            walkToTaxiPlatform();
+
+        if (getMode() == Mode.CALL_TAXI)
+            callTaxi();
+
         setPosition(x, y);
+    }
+
+    private void callTaxi() {
+        // TODO
+    }
+
+    private void walkToTaxiPlatform() {
+        // Determine if taxi platform exists on this ground (by contacting world).
+        // If so, choose one then proceed to walk until you reach sed taxi platform.
+        // Else, generate new mode.
+
+        if (!walkingToTaxiPlatformFlag) {
+            System.out.println("* walkToTaxiPlatform called.");
+            TransportationHubs transportationHubs = world.getTransportationHubs(currentGround);
+            if (transportationHubs.getPlatforms().size > 0) {
+                System.out.println("*** YES, there are indeed taxi platforms on this ground");
+                int platformIndex = generateRandom(transportationHubs.getPlatforms().size - 1);
+                currentPlatform = transportationHubs.getPlatforms().get(platformIndex);
+                walkingToTaxiPlatformFlag = true;
+            }
+        } else {
+            // Take a step closer to taxi platform and determine if we have reached our destination.
+            walk();
+            // reset all flags / modes.
+            System.out.println("* x is: " + x);
+            System.out.println("* currentPlatform x is: " + currentPlatform.getX());
+            if (x == currentPlatform.getX()) {
+                mode = Mode.CALL_TAXI;
+                modeTime = -1;
+                walkingToTaxiPlatformFlag = false;
+                System.out.println("!!! Hey dudes, I've reached the taxi platform stop.");
+                return;
+            }
+        }
+
+        if (!walkingToTaxiPlatformFlag)
+            generateNewMode();
+
     }
 
     private void thinking() {
@@ -82,6 +134,10 @@ public class Traveller {
             return;
         }
 
+        walk();
+    }
+
+    private void walk() {
         if (travellingDirection == Direction.RIGHT) {
             if (x < currentGround.getX() + (currentGround.getWidth() - tileWidth)) {
                 x++;
@@ -112,32 +168,19 @@ public class Traveller {
                 modeTime = generateRandom(30);
                 break;
             case 2:
-                mode = Mode.WALK;
-                modeTime = generateRandom(30);
-//                mode = Mode.WALK_TO_TAXI_PLATFORM;
-//                modeTime = -1;
+                mode = Mode.WALK_TO_TAXI_PLATFORM;
+                modeTime = -1;
                 break;
             case 3:
                 mode = Mode.WALK;
                 modeTime = generateRandom(30);
+                // TODO
 //                mode = Mode.WALK_POD_STOP;
 //                modeTime = -1;
                 break;
             case 4:
                 mode = Mode.STOP;
                 modeTime = generateRandom(30);
-                break;
-            case 5:
-                mode = Mode.WALK;
-                modeTime = generateRandom(30);
-//                mode = Mode.CALL_TAXI;
-//                modeTime = -1;
-                break;
-            case 6:
-                mode = Mode.WALK;
-                modeTime = generateRandom(30);
-//                mode = Mode.CALL_POD;
-//                modeTime = -1;
                 break;
         }
 
@@ -154,13 +197,14 @@ public class Traveller {
     }
 
     public void draw(Batch batch) {
-        if (mode == Mode.WALK || mode == Mode.WALK_POD_STOP || mode == Mode.WALK_TO_TAXI_PLATFORM) {
+        if (mode == Mode.WALK || mode == Mode.WALK_POD_STOP || mode == Mode.WALK_TO_TAXI_PLATFORM)
             travellerToRender = travellerWalkingAnimation.getKeyFrame(animationTimer);
-        }
 
-        if (mode == Mode.THINK) {
+        if (mode == Mode.THINK)
             batch.draw(thoughtBubble, Math.round(x), Math.round(y) + tileHeight);
-        }
+
+        if (mode == Mode.CALL_TAXI)
+            batch.draw(taxiBubble, Math.round(x), Math.round(y) + tileHeight);
 
         batch.draw(travellerToRender, Math.round(x), Math.round(y));
     }

@@ -1,6 +1,7 @@
 package com.mygdx.simulation.travellers.factory;
 
 import com.mygdx.simulation.TransportSimulation;
+import com.mygdx.simulation.World;
 import com.mygdx.simulation.travellers.Traveller;
 import com.mygdx.simulation.travellers.TravellerA;
 import com.mygdx.simulation.travellers.TravellerB;
@@ -15,13 +16,13 @@ public class TravellerFactory {
     private static final String TRAVELLER_B = "TravellerB";
     private static final String TRAVELLER_C = "TravellerC";
 
-    public static Traveller getTraveller(String travellerType, TransportSimulation transportSimulation) {
+    public static Traveller getTraveller(String travellerType, TransportSimulation transportSimulation, World world) {
         if (travellerType.equals(TRAVELLER_A))
-            return new TravellerA(transportSimulation);
+            return new TravellerA(transportSimulation, world);
         if (travellerType.equals(TRAVELLER_B))
-            return new TravellerB(transportSimulation);
+            return new TravellerB(transportSimulation, world);
         if (travellerType.equals(TRAVELLER_C))
-            return new TravellerC(transportSimulation);
+            return new TravellerC(transportSimulation, world);
 
         return null;
     }

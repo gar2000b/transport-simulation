@@ -411,10 +411,16 @@ public class World extends ScreenAdapter {
             }
         }
 
+        System.out.println();
+        System.out.println("# ground y: " + ground.getY());
         // Next, check all Platforms that lie directly on top of this ground.
         for (Rectangle platform : platforms) {
-            if (ground.getY() == (platform.getY() - platform.getHeight()) && platform.getX() > ground.getX() && (platform
+            System.out.println("# platform y: " + platform.getY());
+            System.out.println("# platform height: " + platform.getHeight());
+            System.out.println();
+            if (ground.getY() == (platform.getY() - 1) && platform.getX() > ground.getX() && (platform
                     .getX() + platform.getWidth()) < (ground.getX() + ground.getWidth())) {
+                System.out.println("# platform should be getting added now.");
                 platformsForTransfer.add(platform);
             }
         }

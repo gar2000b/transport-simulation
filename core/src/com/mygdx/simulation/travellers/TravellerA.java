@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.mygdx.simulation.TransportSimulation;
+import com.mygdx.simulation.World;
 
 /**
  * Created by Digilogue on 21/11/2016.
@@ -14,8 +15,8 @@ public class TravellerA extends Traveller {
      *
      * @param transportSimulation
      */
-    public TravellerA(TransportSimulation transportSimulation) {
-        super(transportSimulation);
+    public TravellerA(TransportSimulation transportSimulation, World world) {
+        super(transportSimulation, world);
 
         tileWidth = 82;
         tileHeight = 95;
