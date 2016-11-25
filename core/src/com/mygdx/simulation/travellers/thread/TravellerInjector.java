@@ -3,6 +3,7 @@ package com.mygdx.simulation.travellers.thread;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.mygdx.simulation.TransportSimulation;
+import com.mygdx.simulation.World;
 import com.mygdx.simulation.travellers.Traveller;
 import com.mygdx.simulation.travellers.factory.TravellerFactory;
 
@@ -19,12 +20,15 @@ public class TravellerInjector extends Thread {
     private TransportSimulation transportSimulation;
 
     private int travellerIndex = 0;
+    private World world;
 
-    public TravellerInjector(Array<Rectangle> grounds, Array<Traveller> travellers, TransportSimulation transportSimulation) {
+    public TravellerInjector(Array<Rectangle> grounds, Array<Traveller> travellers, TransportSimulation
+            transportSimulation, World world) {
         grounds.shuffle();
         this.grounds = grounds;
         this.travellers = travellers;
         this.transportSimulation = transportSimulation;
+        this.world = world;
 
         travellerTypes = new Array<String>();
 
@@ -43,7 +47,7 @@ public class TravellerInjector extends Thread {
                     i = 0;
                 Traveller traveller = TravellerFactory.getTraveller(getNextTravellerType(), transportSimulation);
                 traveller.setTravellerOnGround(grounds.get(i));
-                traveller.setWalk(true);
+                traveller.setMode(Traveller.Mode.WALK);
                 travellers.add(traveller);
                 if (totalCount == grounds.size * 3)
                     break;

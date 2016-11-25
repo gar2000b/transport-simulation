@@ -15,6 +15,7 @@ public class TravellerA extends Traveller {
      * @param transportSimulation
      */
     public TravellerA(TransportSimulation transportSimulation) {
+        super(transportSimulation);
 
         tileWidth = 82;
         tileHeight = 95;

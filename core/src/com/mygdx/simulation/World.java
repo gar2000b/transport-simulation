@@ -17,17 +17,15 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.mygdx.simulation.dto.TransportationHubs;
 import com.mygdx.simulation.travellers.Traveller;
-import com.mygdx.simulation.travellers.TravellerA;
-import com.mygdx.simulation.travellers.TravellerB;
-import com.mygdx.simulation.travellers.TravellerC;
 import com.mygdx.simulation.travellers.thread.TravellerInjector;
 import com.mygdx.simulation.vehicles.Taxi;
 
 /**
  * Created by Digilogue on 19/11/2016.
  */
-public class GameScreen extends ScreenAdapter {
+public class World extends ScreenAdapter {
 
     private enum SimulationMode {PAN, TAXI}
 
@@ -44,9 +42,6 @@ public class GameScreen extends ScreenAdapter {
     private TiledMap tiledMap;
     private OrthogonalTiledMapRenderer orthogonalTiledMapRenderer;
     private Taxi taxi;
-    private TravellerA travellerA;
-    private TravellerB travellerB;
-    private TravellerC travellerC;
     private Array<Traveller> travellers = new Array<Traveller>();
     private Array<Rectangle> platforms = new Array<Rectangle>();
     private Array<Rectangle> grounds = new Array<Rectangle>();
@@ -58,7 +53,7 @@ public class GameScreen extends ScreenAdapter {
     private boolean displayAllLayersFlag = true;
     private boolean pauseFlag = false;
 
-    public GameScreen(TransportSimulation transportSimulation) {
+    public World(TransportSimulation transportSimulation) {
         this.transportSimulation = transportSimulation;
     }
 
@@ -98,27 +93,8 @@ public class GameScreen extends ScreenAdapter {
 
     private void createTravellers() {
 
-        TravellerInjector travellerInjector = new TravellerInjector(grounds, travellers, transportSimulation);
+        TravellerInjector travellerInjector = new TravellerInjector(grounds, travellers, transportSimulation, this);
         travellerInjector.start();
-
-//        for (int i = 0; i < grounds.size; i++) {
-//            TravellerA travellerA = new TravellerA(transportSimulation);
-//            TravellerB travellerB = new TravellerB(transportSimulation);
-//            TravellerC travellerC = new TravellerC(transportSimulation);
-//
-//            travellerA.setTravellerOnGround(grounds.get(i));
-//            travellerA.setWalk(true);
-//            travellerB.setTravellerOnGround(grounds.get(i));
-//            travellerB.setWalk(true);
-//            travellerC.setTravellerOnGround(grounds.get(i));
-//            travellerC.setWalk(true);
-//
-//            travellers.add(travellerA);
-//            travellers.add(travellerB);
-//            travellers.add(travellerC);
-//        }
-//
-//        System.out.println("*** travellers size is: " + travellers.size);
     }
 
     @Override
@@ -420,6 +396,34 @@ public class GameScreen extends ScreenAdapter {
         for (int i = 0; i < tiledMap.getLayers().getCount(); i++) {
             tiledMap.getLayers().remove(0);
         }
+    }
+
+    public TransportationHubs getTransportationHubs(Rectangle ground) {
+
+        Array<Rectangle> podStopsForTransfer = new Array<Rectangle>();
+        Array<Rectangle> platformsForTransfer = new Array<Rectangle>();
+
+        // First of all, check all Pod Stops that lie directly on top of this ground.
+        for (Rectangle podStop : podStops) {
+            if (ground.getY() == (podStop.getY() - podStop.getHeight()) && podStop.getX() > ground.getX() && (podStop
+                    .getX() + podStop.getWidth()) < (ground.getX() + ground.getWidth())) {
+                podStopsForTransfer.add(podStop);
+            }
+        }
+
+        // Next, check all Platforms that lie directly on top of this ground.
+        for (Rectangle platform : platforms) {
+            if (ground.getY() == (platform.getY() - platform.getHeight()) && platform.getX() > ground.getX() && (platform
+                    .getX() + platform.getWidth()) < (ground.getX() + ground.getWidth())) {
+                platformsForTransfer.add(platform);
+            }
+        }
+
+        TransportationHubs transportationHubs = new TransportationHubs();
+        transportationHubs.setPodStops(podStopsForTransfer);
+        transportationHubs.setPlatforms(platformsForTransfer);
+
+        return transportationHubs;
     }
 
 }

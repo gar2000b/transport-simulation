@@ -16,6 +16,7 @@ public class TravellerC extends Traveller {
      */
     public TravellerC(TransportSimulation transportSimulation) {
 
+        super(transportSimulation);
         tileWidth = 60;
         tileHeight = 88;
 
