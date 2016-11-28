@@ -41,7 +41,7 @@ public class Traveller {
 
     public enum Direction {LEFT, RIGHT}
 
-    public enum Mode {WALK, THINK, WALK_TO_TAXI_PLATFORM, WALK_POD_STOP, STOP, CALL_TAXI, CALL_POD}
+    public enum Mode {WALK, THINK, WALK_TO_TAXI_PLATFORM, WALK_POD_STOP, STOP, CALL_TAXI, CALL_POD, TAXI_ON_ITS_WAY}
 
     private Direction travellingDirection = Direction.RIGHT;
 
@@ -69,14 +69,7 @@ public class Traveller {
         if (getMode() == Mode.WALK_TO_TAXI_PLATFORM)
             walkToTaxiPlatform();
 
-        if (getMode() == Mode.CALL_TAXI)
-            callTaxi();
-
         setPosition(x, y);
-    }
-
-    private void callTaxi() {
-        // TODO
     }
 
     private void walkToTaxiPlatform() {
@@ -85,7 +78,7 @@ public class Traveller {
         // Else, generate new mode.
 
         if (!walkingToTaxiPlatformFlag) {
-            System.out.println("* walkToTaxiPlatform called.");
+//            System.out.println("* walkToTaxiPlatform called.");
             TransportationHubs transportationHubs = world.getTransportationHubs(currentGround);
             if (transportationHubs.getPlatforms().size > 0) {
                 System.out.println("*** YES, there are indeed taxi platforms on this ground");
@@ -97,8 +90,8 @@ public class Traveller {
             // Take a step closer to taxi platform and determine if we have reached our destination.
             walk();
             // reset all flags / modes.
-            System.out.println("* x is: " + x);
-            System.out.println("* currentPlatform x is: " + currentPlatform.getX());
+//            System.out.println("* x is: " + x);
+//            System.out.println("* currentPlatform x is: " + currentPlatform.getX());
             if (x == currentPlatform.getX()) {
                 mode = Mode.CALL_TAXI;
                 modeTime = -1;
@@ -203,9 +196,9 @@ public class Traveller {
         if (mode == Mode.THINK)
             batch.draw(thoughtBubble, Math.round(x), Math.round(y) + tileHeight);
 
-        if (mode == Mode.CALL_TAXI)
+        if (mode == Mode.CALL_TAXI || mode == Mode.TAXI_ON_ITS_WAY) {
             batch.draw(taxiBubble, Math.round(x), Math.round(y) + tileHeight);
-
+        }
         batch.draw(travellerToRender, Math.round(x), Math.round(y));
     }
 
@@ -255,4 +248,19 @@ public class Traveller {
         modeTime = generateRandom(30);
     }
 
+    public Rectangle getCurrentGround() {
+        return currentGround;
+    }
+
+    public void setCurrentGround(Rectangle currentGround) {
+        this.currentGround = currentGround;
+    }
+
+    public Rectangle getCurrentPlatform() {
+        return currentPlatform;
+    }
+
+    public void setCurrentPlatform(Rectangle currentPlatform) {
+        this.currentPlatform = currentPlatform;
+    }
 }

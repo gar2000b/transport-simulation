@@ -24,7 +24,7 @@ public class TravellerInjector extends Thread {
 
     public TravellerInjector(Array<Rectangle> grounds, Array<Traveller> travellers, TransportSimulation
             transportSimulation, World world) {
-        // grounds.shuffle();
+        //  TODO / UNDO grounds.shuffle();
         this.grounds = grounds;
         this.travellers = travellers;
         this.transportSimulation = transportSimulation;
@@ -41,6 +41,7 @@ public class TravellerInjector extends Thread {
     public void run() {
         try {
             int totalCount = 0;
+            // TODO / UNDO grounds.size * 3
             for (int i = 0; i < 1; i++) {
                 totalCount++;
                 if (i == grounds.size - 1)

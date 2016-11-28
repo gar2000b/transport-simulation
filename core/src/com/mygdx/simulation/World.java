@@ -53,6 +53,10 @@ public class World extends ScreenAdapter {
     private boolean displayAllLayersFlag = true;
     private boolean pauseFlag = false;
 
+    private int simulationSpeed = 1;
+    private int setSpeed = 1;
+    private float elapsedTime = 0;
+
     public World(TransportSimulation transportSimulation) {
         this.transportSimulation = transportSimulation;
     }
@@ -75,6 +79,7 @@ public class World extends ScreenAdapter {
         orthogonalTiledMapRenderer.setView(camera);
 
         taxi = new Taxi(transportSimulation);
+        taxi.setAutomateTaxi(true);
 
         buildPlatforms();
         buildGrounds();
@@ -106,7 +111,9 @@ public class World extends ScreenAdapter {
     @Override
     public void render(float delta) {
         super.render(delta);
-        update(delta);
+        for (int i = 0; i < simulationSpeed; i++) {
+            update(delta);
+        }
         clearScreen();
         draw();
     }
@@ -126,11 +133,48 @@ public class World extends ScreenAdapter {
         updateCamera();
         toggleLayers();
         toggleMode();
+        toggleAutomateTaxi();
         togglePause();
+        checkTaxiRequests();
+        updateSimulationSpeed(delta);
+    }
+
+    private void updateSimulationSpeed(float delta) {
+
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.MINUS)) {
+            if (simulationSpeed > 1) {
+                setSpeed = simulationSpeed - 1;
+            }
+        }
+        if (input.isKeyJustPressed(Input.Keys.EQUALS)) {
+//            System.out.println("increase speed called");
+            setSpeed = simulationSpeed + 1;
+        }
+
+        elapsedTime += delta;
+
+        if (elapsedTime > 0.05) {
+            simulationSpeed = setSpeed;
+            elapsedTime = 0;
+        }
+    }
+
+    private void checkTaxiRequests() {
+
+//        System.out.println("* taxi x-speed is: " + taxi.getxSpeed());
+//        System.out.println("* taxi y-speed is: " + taxi.getySpeed());
+        for (Traveller traveller : travellers) {
+            if (traveller.getMode() == Traveller.Mode.CALL_TAXI) {
+                // Tell taxi to pick up traveller and set travellers mode to TAXI_ON_ITS_WAY
+                taxi.pickupTraveller(traveller.getCurrentPlatform());
+                traveller.setMode(Traveller.Mode.TAXI_ON_ITS_WAY);
+            }
+        }
     }
 
     private void updateTaxi(float delta) {
-        if (simulationMode == SimulationMode.TAXI)
+//        if (simulationMode == SimulationMode.TAXI)
             taxi.update(delta, platforms, WORLD_WIDTH, WORLD_HEIGHT);
     }
 
@@ -311,11 +355,11 @@ public class World extends ScreenAdapter {
 
     private void cameraZoom() {
         Input input = Gdx.input;
-        if (input.isKeyPressed(Input.Keys.S)) {
+        if (input.isKeyPressed(Input.Keys.X)) {
             camera.zoom += 0.02;
         }
 
-        if (input.isKeyPressed(Input.Keys.A)) {
+        if (input.isKeyPressed(Input.Keys.Z)) {
             camera.zoom -= 0.02;
         }
 
@@ -357,11 +401,21 @@ public class World extends ScreenAdapter {
         if (input.isKeyJustPressed(Input.Keys.M)) {
             if (simulationMode == SimulationMode.TAXI) {
                 simulationMode = SimulationMode.PAN;
+                // taxi.setAutomateTaxi(true);
                 return;
             }
-            if (simulationMode == SimulationMode.PAN)
+            if (simulationMode == SimulationMode.PAN) {
                 simulationMode = SimulationMode.TAXI;
+                // taxi.setAutomateTaxi(false);
+            }
             return;
+        }
+    }
+
+    private void toggleAutomateTaxi() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.A)) {
+            taxi.setAutomateTaxi(!taxi.isAutomateTaxi());
         }
     }
 
