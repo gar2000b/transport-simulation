@@ -17,17 +17,15 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.mygdx.simulation.dto.TransportationHubs;
 import com.mygdx.simulation.travellers.Traveller;
-import com.mygdx.simulation.travellers.TravellerA;
-import com.mygdx.simulation.travellers.TravellerB;
-import com.mygdx.simulation.travellers.TravellerC;
 import com.mygdx.simulation.travellers.thread.TravellerInjector;
 import com.mygdx.simulation.vehicles.Taxi;
 
 /**
  * Created by Digilogue on 19/11/2016.
  */
-public class GameScreen extends ScreenAdapter {
+public class World extends ScreenAdapter {
 
     private enum SimulationMode {PAN, TAXI}
 
@@ -44,9 +42,6 @@ public class GameScreen extends ScreenAdapter {
     private TiledMap tiledMap;
     private OrthogonalTiledMapRenderer orthogonalTiledMapRenderer;
     private Taxi taxi;
-    private TravellerA travellerA;
-    private TravellerB travellerB;
-    private TravellerC travellerC;
     private Array<Traveller> travellers = new Array<Traveller>();
     private Array<Rectangle> platforms = new Array<Rectangle>();
     private Array<Rectangle> grounds = new Array<Rectangle>();
@@ -56,8 +51,13 @@ public class GameScreen extends ScreenAdapter {
     private SimulationMode simulationMode = SimulationMode.TAXI;
 
     private boolean displayAllLayersFlag = true;
+    private boolean pauseFlag = false;
 
-    public GameScreen(TransportSimulation transportSimulation) {
+    private int simulationSpeed = 1;
+    private int setSpeed = 1;
+    private float elapsedTime = 0;
+
+    public World(TransportSimulation transportSimulation) {
         this.transportSimulation = transportSimulation;
     }
 
@@ -79,6 +79,7 @@ public class GameScreen extends ScreenAdapter {
         orthogonalTiledMapRenderer.setView(camera);
 
         taxi = new Taxi(transportSimulation);
+        taxi.setAutomateTaxi(true);
 
         buildPlatforms();
         buildGrounds();
@@ -97,27 +98,8 @@ public class GameScreen extends ScreenAdapter {
 
     private void createTravellers() {
 
-        TravellerInjector travellerInjector = new TravellerInjector(grounds, travellers, transportSimulation);
+        TravellerInjector travellerInjector = new TravellerInjector(grounds, travellers, transportSimulation, this);
         travellerInjector.start();
-
-//        for (int i = 0; i < grounds.size; i++) {
-//            TravellerA travellerA = new TravellerA(transportSimulation);
-//            TravellerB travellerB = new TravellerB(transportSimulation);
-//            TravellerC travellerC = new TravellerC(transportSimulation);
-//
-//            travellerA.setTravellerOnGround(grounds.get(i));
-//            travellerA.setWalk(true);
-//            travellerB.setTravellerOnGround(grounds.get(i));
-//            travellerB.setWalk(true);
-//            travellerC.setTravellerOnGround(grounds.get(i));
-//            travellerC.setWalk(true);
-//
-//            travellers.add(travellerA);
-//            travellers.add(travellerB);
-//            travellers.add(travellerC);
-//        }
-//
-//        System.out.println("*** travellers size is: " + travellers.size);
     }
 
     @Override
@@ -129,7 +111,9 @@ public class GameScreen extends ScreenAdapter {
     @Override
     public void render(float delta) {
         super.render(delta);
-        update(delta);
+        for (int i = 0; i < simulationSpeed; i++) {
+            update(delta);
+        }
         clearScreen();
         draw();
     }
@@ -140,17 +124,57 @@ public class GameScreen extends ScreenAdapter {
      * @param delta
      */
     private void update(float delta) {
-        updateTaxi(delta);
-        updateTravellers(delta);
+        if (!pauseFlag) {
+            updateTaxi(delta);
+            updateTravellers(delta);
+        }
         camera.update();
         orthogonalTiledMapRenderer.setView(camera);
         updateCamera();
         toggleLayers();
         toggleMode();
+        toggleAutomateTaxi();
+        togglePause();
+        checkTaxiRequests();
+        updateSimulationSpeed(delta);
+    }
+
+    private void updateSimulationSpeed(float delta) {
+
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.MINUS)) {
+            if (simulationSpeed > 1) {
+                setSpeed = simulationSpeed - 1;
+            }
+        }
+        if (input.isKeyJustPressed(Input.Keys.EQUALS)) {
+//            System.out.println("increase speed called");
+            setSpeed = simulationSpeed + 1;
+        }
+
+        elapsedTime += delta;
+
+        if (elapsedTime > 0.05) {
+            simulationSpeed = setSpeed;
+            elapsedTime = 0;
+        }
+    }
+
+    private void checkTaxiRequests() {
+
+//        System.out.println("* taxi x-speed is: " + taxi.getxSpeed());
+//        System.out.println("* taxi y-speed is: " + taxi.getySpeed());
+        for (Traveller traveller : travellers) {
+            if (traveller.getMode() == Traveller.Mode.CALL_TAXI) {
+                // Tell taxi to pick up traveller and set travellers mode to TAXI_ON_ITS_WAY
+                taxi.pickupTraveller(traveller.getCurrentPlatform());
+                traveller.setMode(Traveller.Mode.TAXI_ON_ITS_WAY);
+            }
+        }
     }
 
     private void updateTaxi(float delta) {
-        if (simulationMode == SimulationMode.TAXI)
+//        if (simulationMode == SimulationMode.TAXI)
             taxi.update(delta, platforms, WORLD_WIDTH, WORLD_HEIGHT);
     }
 
@@ -331,11 +355,11 @@ public class GameScreen extends ScreenAdapter {
 
     private void cameraZoom() {
         Input input = Gdx.input;
-        if (input.isKeyPressed(Input.Keys.S)) {
+        if (input.isKeyPressed(Input.Keys.X)) {
             camera.zoom += 0.02;
         }
 
-        if (input.isKeyPressed(Input.Keys.A)) {
+        if (input.isKeyPressed(Input.Keys.Z)) {
             camera.zoom -= 0.02;
         }
 
@@ -377,11 +401,28 @@ public class GameScreen extends ScreenAdapter {
         if (input.isKeyJustPressed(Input.Keys.M)) {
             if (simulationMode == SimulationMode.TAXI) {
                 simulationMode = SimulationMode.PAN;
+                // taxi.setAutomateTaxi(true);
                 return;
             }
-            if (simulationMode == SimulationMode.PAN)
+            if (simulationMode == SimulationMode.PAN) {
                 simulationMode = SimulationMode.TAXI;
+                // taxi.setAutomateTaxi(false);
+            }
             return;
+        }
+    }
+
+    private void toggleAutomateTaxi() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.A)) {
+            taxi.setAutomateTaxi(!taxi.isAutomateTaxi());
+        }
+    }
+
+    private void togglePause() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.P)) {
+            pauseFlag = !pauseFlag;
         }
     }
 
@@ -409,6 +450,40 @@ public class GameScreen extends ScreenAdapter {
         for (int i = 0; i < tiledMap.getLayers().getCount(); i++) {
             tiledMap.getLayers().remove(0);
         }
+    }
+
+    public TransportationHubs getTransportationHubs(Rectangle ground) {
+
+        Array<Rectangle> podStopsForTransfer = new Array<Rectangle>();
+        Array<Rectangle> platformsForTransfer = new Array<Rectangle>();
+
+        // First of all, check all Pod Stops that lie directly on top of this ground.
+        for (Rectangle podStop : podStops) {
+            if (ground.getY() == (podStop.getY() - podStop.getHeight()) && podStop.getX() > ground.getX() && (podStop
+                    .getX() + podStop.getWidth()) < (ground.getX() + ground.getWidth())) {
+                podStopsForTransfer.add(podStop);
+            }
+        }
+
+        System.out.println();
+        System.out.println("# ground y: " + ground.getY());
+        // Next, check all Platforms that lie directly on top of this ground.
+        for (Rectangle platform : platforms) {
+            System.out.println("# platform y: " + platform.getY());
+            System.out.println("# platform height: " + platform.getHeight());
+            System.out.println();
+            if (ground.getY() == (platform.getY() - 1) && platform.getX() > ground.getX() && (platform
+                    .getX() + platform.getWidth()) < (ground.getX() + ground.getWidth())) {
+                System.out.println("# platform should be getting added now.");
+                platformsForTransfer.add(platform);
+            }
+        }
+
+        TransportationHubs transportationHubs = new TransportationHubs();
+        transportationHubs.setPodStops(podStopsForTransfer);
+        transportationHubs.setPlatforms(platformsForTransfer);
+
+        return transportationHubs;
     }
 
 }

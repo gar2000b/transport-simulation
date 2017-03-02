@@ -29,6 +29,7 @@ public class Taxi {
     private static final float THRUSTER_FRAME_DURATION = 0.03F;
     private static final int THRUSTER_TILE_WIDTH = 16;
     private static final int THRUSTER_TILE_HEIGHT = 16;
+    private static final float MAX_SPEED = 5;
 
     private Texture taxiLeft;
     private Texture taxiRight;
@@ -42,6 +43,7 @@ public class Taxi {
 
     TextureRegion thrusterToRender;
     TextureRegion[][] thrusterTextures;
+    private Rectangle pickupPlatform;
 
     public enum Direction {UP, DOWN, LEFT, RIGHT}
 
@@ -51,15 +53,20 @@ public class Taxi {
     private Direction travellingUpDownDirection = Direction.DOWN; // The current direction of travel.
 
     private boolean landingGear = true;
+    private boolean automateTaxi = false;
+    private boolean pickupTraveller = false;
 
-    private float x = 80;
-    private float y = 3333;
+    private float x = 906;
+    private float y = 3600;
 
     private float previousX = 0;
     private float previousY = -7;
 
     private float ySpeed = 0;
     private float xSpeed = 0;
+
+    private float maxDistanceBeforeApplyingUpThrustUpdates;
+    private int upthrustUpdatesToVerticalEquilibrium = 0;
 
     private boolean landed = false;
 
@@ -79,6 +86,10 @@ public class Taxi {
     public Taxi(TransportSimulation transportSimulation) {
         getAssets(transportSimulation);
         setupThrusterAnimation(transportSimulation);
+        maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceBeforeApplyingUpThrustUpdates(MAX_SPEED);
+    }
+
+    public Taxi() {
     }
 
     private void getAssets(TransportSimulation transportSimulation) {
@@ -218,8 +229,16 @@ public class Taxi {
      * If taxi is not landed then proceed with dive.
      */
     private void processDive() {
-        if (!landed)
+        if (!landed) {
             ySpeed -= DIVE_ACCEL;
+//            if (ySpeed < -MAX_SPEED) {
+//                thrusterDirectionUp = true;
+//                ySpeed += THRUST_UP_ACCEL;
+//                landed = false;
+//            } else {
+//                ySpeed -= DIVE_ACCEL;
+//            }
+        }
     }
 
     /**
@@ -262,16 +281,117 @@ public class Taxi {
         thrusterDirectionLeft = false;
         thrusterDirectionRight = false;
 
+        controlTaxi();
+    }
+
+    private void controlTaxi() {
+        if (automateTaxi) {
+            automaticControlTaxi();
+        } else {
+            manualControlTaxi();
+        }
+    }
+
+    private void automaticControlTaxi() {
+        if (pickupTraveller) {
+            // If landing gear is enabled, disable.
+            if (landingGear) {
+                landingGear = !landingGear;
+            }
+            if (upthrustUpdatesToVerticalEquilibrium > 0) {
+                System.out.println("*1");
+                ySpeed += THRUST_UP_ACCEL;
+                upthrustUpdatesToVerticalEquilibrium--;
+                // Determine direction to travel and cap x & y speeds.
+                // Do we need to go up?
+            } else if (pickupPlatform.getY() > y - maxDistanceBeforeApplyingUpThrustUpdates) {
+                thrusterDirectionUp = true;
+                // If pickupPlatform.getY() - y is <= the maxDistanceBeforeApplyingUpThrustUpdates, then
+                // calculate the new maxDistanceBeforeApplyingUpThrustUpdates and upthrustUpdatesToVerticalEquilibrium
+                // to be picked up earlier in this method.
+                if ((y - pickupPlatform.getY()) <= maxDistanceBeforeApplyingUpThrustUpdates) {
+                    System.out.println("*2 - ySpeed is: " + Math.abs(ySpeed) + " " +
+                            "- maxDistanceBeforeApplyingUpThrustUpdates: " + maxDistanceBeforeApplyingUpThrustUpdates);
+                    if (calculateMaxDistanceBeforeApplyingUpThrustUpdates(Math.abs(ySpeed)) <
+                            maxDistanceBeforeApplyingUpThrustUpdates) {
+                        System.out.println("*3");
+                        maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceBeforeApplyingUpThrustUpdates
+                                (Math.abs(ySpeed));
+                        System.out.println("maxDistanceBeforeApplyingUpThrustUpdates - " + maxDistanceBeforeApplyingUpThrustUpdates);
+                    } else {
+                        System.out.println("*4");
+                        upthrustUpdatesToVerticalEquilibrium = (int) Math.ceil
+                                (calculateUpthrustUpdatesToVerticalEquilibrium
+                                        (Math.abs(ySpeed)));
+                        System.out.println("upthrustUpdatesToVerticalEquilibrium: " + upthrustUpdatesToVerticalEquilibrium);
+                    }
+                } else if (ySpeed < MAX_SPEED) {
+                    System.out.println("*5");
+                    // ySpeed += THRUST_UP_ACCEL;
+                }
+                landed = false;
+            }
+            // Do we need to go down?
+            if (pickupPlatform.getY() < y) {
+                thrusterDirectionDown = true;
+                if (ySpeed > -MAX_SPEED)
+                    ySpeed -= THRUST_DOWN_ACCEL;
+                landed = false;
+            }
+            // Do we need to go left?
+            // System.out.println("* taxi needs to go left");
+            // Do we need to go right?
+            // System.out.println("* taxi needs to go right");
+        }
+    }
+
+    public static void main(String[] args) {
+        Taxi taxi = new Taxi();
+        System.out.println("No of updates: " + taxi.calculateUpthrustUpdatesToVerticalEquilibrium(4));
+        System.out.println("Max distance: " + taxi.calculateMaxDistanceBeforeApplyingUpThrustUpdates(4));
+        System.out.println();
+
+        float speed = 5;
+        float totalDistance = 0;
+        for (int i = 0; i < 40; i++) {
+            totalDistance += speed;
+            speed = speed - 0.125f;
+        }
+        System.out.println("Speed is: " + speed);
+        System.out.println("Total Distance is: " + totalDistance);
+    }
+
+    private float calculateUpthrustUpdatesToVerticalEquilibrium(float pixels) {
+
+        float updates = pixels / THRUST_UP_ACCEL;
+        if (updates < 1)
+            return updates;
+        float remainingDistanceToTravel = updates * DIVE_ACCEL;
+        return updates + calculateUpthrustUpdatesToVerticalEquilibrium(remainingDistanceToTravel);
+    }
+
+    private float calculateMaxDistanceBeforeApplyingUpThrustUpdates(float pixels) {
+
+        float updates = pixels / THRUST_UP_ACCEL;
+        float remainingDistanceToTravel = updates * DIVE_ACCEL;
+        if (updates < 1)
+            return remainingDistanceToTravel;
+        return pixels + calculateMaxDistanceBeforeApplyingUpThrustUpdates(remainingDistanceToTravel);
+    }
+
+    private void manualControlTaxi() {
         Input input = Gdx.input;
         if (input.isKeyPressed(Input.Keys.RIGHT)) {
             thrusterDirectionRight = true;
             leftRightFlag = Direction.RIGHT;
             xSpeed += HORIZ_ACCEL;
+            landed = false;
         }
         if (input.isKeyPressed(Input.Keys.LEFT)) {
             thrusterDirectionLeft = true;
             leftRightFlag = Direction.LEFT;
             xSpeed -= HORIZ_ACCEL;
+            landed = false;
         }
         if (input.isKeyPressed(Input.Keys.UP)) {
             thrusterDirectionUp = true;
@@ -281,9 +401,12 @@ public class Taxi {
         if (input.isKeyPressed(Input.Keys.DOWN)) {
             thrusterDirectionDown = true;
             ySpeed -= THRUST_DOWN_ACCEL;
+            landed = false;
         }
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
             landingGear = !landingGear;
+            if (!landingGear)
+                landed = false;
         }
     }
 
@@ -313,7 +436,6 @@ public class Taxi {
 
         if (landingGear) {
             for (Rectangle rectangle : platforms) {
-
                 if (((rectangle.getY() + rectangle.getHeight() <= previousY &&
                         rectangle.getY() + rectangle.getHeight() >= y))) {
                     float landingPylonOffsetLeftX = LANDING_PYLON_LEFT_X + x;
@@ -325,10 +447,18 @@ public class Taxi {
                         xSpeed = 0;
                         ySpeed = 0;
                         landed = true;
+                        System.out.println("taxi y is: " + y);
+                        System.out.println("current platform y is: " + rectangle.getY());
                     }
                 }
             }
         }
+    }
+
+    public void pickupTraveller(Rectangle pickupPlatform) {
+        pickupTraveller = true;
+        this.pickupPlatform = pickupPlatform;
+        System.out.println("pickup platform y is: " + pickupPlatform.getY());
     }
 
     /**
@@ -379,5 +509,29 @@ public class Taxi {
      */
     public Direction getTravellingUpDownDirection() {
         return travellingUpDownDirection;
+    }
+
+    public boolean isAutomateTaxi() {
+        return automateTaxi;
+    }
+
+    public void setAutomateTaxi(boolean automateTaxi) {
+        this.automateTaxi = automateTaxi;
+    }
+
+    public float getySpeed() {
+        return ySpeed;
+    }
+
+    public void setySpeed(float ySpeed) {
+        this.ySpeed = ySpeed;
+    }
+
+    public float getxSpeed() {
+        return xSpeed;
+    }
+
+    public void setxSpeed(float xSpeed) {
+        this.xSpeed = xSpeed;
     }
 }

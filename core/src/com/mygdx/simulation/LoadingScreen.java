@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -60,6 +59,8 @@ public class LoadingScreen extends ScreenAdapter {
         transportSimulation.getAssetManager().load("traveller-a.png", Texture.class);
         transportSimulation.getAssetManager().load("traveller-b.png", Texture.class);
         transportSimulation.getAssetManager().load("traveller-c.png", Texture.class);
+        transportSimulation.getAssetManager().load("thought-bubble.png", Texture.class);
+        transportSimulation.getAssetManager().load("taxi-bubble.png", Texture.class);
     }
 
     @Override
@@ -78,7 +79,7 @@ public class LoadingScreen extends ScreenAdapter {
 
     private void update() {
         if (transportSimulation.getAssetManager().update()) {
-            transportSimulation.setScreen(new GameScreen(transportSimulation));
+            transportSimulation.setScreen(new World(transportSimulation));
         } else {
             progress = transportSimulation.getAssetManager().getProgress();
         }
