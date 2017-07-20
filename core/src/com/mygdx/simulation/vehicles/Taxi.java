@@ -36,14 +36,15 @@ public class Taxi {
     private Texture taxiLeftGear;
     private Texture taxiRightGear;
 
-    Animation thrusterUpAnimation;
-    Animation thrusterDownAnimation;
-    Animation thrusterLeftAnimation;
-    Animation thrusterRightAnimation;
+    Animation<TextureRegion> thrusterUpAnimation;
+    Animation<TextureRegion> thrusterDownAnimation;
+    Animation<TextureRegion> thrusterLeftAnimation;
+    Animation<TextureRegion> thrusterRightAnimation;
 
     TextureRegion thrusterToRender;
     TextureRegion[][] thrusterTextures;
     private Rectangle pickupPlatform;
+    private float delta;
 
     public enum Direction {UP, DOWN, LEFT, RIGHT}
 
@@ -86,7 +87,7 @@ public class Taxi {
     public Taxi(TransportSimulation transportSimulation) {
         getAssets(transportSimulation);
         setupThrusterAnimation(transportSimulation);
-        maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceBeforeApplyingUpThrustUpdates(MAX_SPEED);
+        maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceToTravelWhileApplyingUpThrustUpdates(MAX_SPEED);
     }
 
     public Taxi() {
@@ -211,6 +212,7 @@ public class Taxi {
      */
     public void update(float delta, Array<Rectangle> platforms, float worldWidth, float worldHeight) {
 
+        this.delta = delta;
         updateAnimationTimers(delta);
         processInput();
         processCollisionWithPlatforms(platforms);
@@ -294,50 +296,47 @@ public class Taxi {
 
     private void automaticControlTaxi() {
         if (pickupTraveller) {
-            // If landing gear is enabled, disable.
-            if (landingGear) {
-                landingGear = !landingGear;
-            }
+            disableLandingGear();
+
+            // Always calculate the (Max Distance Before Applying Up Thrust Updates) during each iteration
+            // of the game loop as this can always change depending on the taxis speed.
+            maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceToTravelWhileApplyingUpThrustUpdates
+                    (Math.abs(ySpeed));
+
+            // Do we need to go up?
+            // If there are upthrust updates, then apply those updates by inc the ySpeed.
             if (upthrustUpdatesToVerticalEquilibrium > 0) {
-                System.out.println("*1");
-                ySpeed += THRUST_UP_ACCEL;
-                upthrustUpdatesToVerticalEquilibrium--;
-                // Determine direction to travel and cap x & y speeds.
-                // Do we need to go up?
-            } else if (pickupPlatform.getY() > y - maxDistanceBeforeApplyingUpThrustUpdates) {
-                thrusterDirectionUp = true;
-                // If pickupPlatform.getY() - y is <= the maxDistanceBeforeApplyingUpThrustUpdates, then
-                // calculate the new maxDistanceBeforeApplyingUpThrustUpdates and upthrustUpdatesToVerticalEquilibrium
-                // to be picked up earlier in this method.
-                if ((y - pickupPlatform.getY()) <= maxDistanceBeforeApplyingUpThrustUpdates) {
-                    System.out.println("*2 - ySpeed is: " + Math.abs(ySpeed) + " " +
-                            "- maxDistanceBeforeApplyingUpThrustUpdates: " + maxDistanceBeforeApplyingUpThrustUpdates);
-                    if (calculateMaxDistanceBeforeApplyingUpThrustUpdates(Math.abs(ySpeed)) <
-                            maxDistanceBeforeApplyingUpThrustUpdates) {
-                        System.out.println("*3");
-                        maxDistanceBeforeApplyingUpThrustUpdates = calculateMaxDistanceBeforeApplyingUpThrustUpdates
-                                (Math.abs(ySpeed));
-                        System.out.println("maxDistanceBeforeApplyingUpThrustUpdates - " + maxDistanceBeforeApplyingUpThrustUpdates);
-                    } else {
-                        System.out.println("*4");
-                        upthrustUpdatesToVerticalEquilibrium = (int) Math.ceil
-                                (calculateUpthrustUpdatesToVerticalEquilibrium
-                                        (Math.abs(ySpeed)));
-                        System.out.println("upthrustUpdatesToVerticalEquilibrium: " + upthrustUpdatesToVerticalEquilibrium);
-                    }
-                } else if (ySpeed < MAX_SPEED) {
-                    System.out.println("*5");
-                    // ySpeed += THRUST_UP_ACCEL;
-                }
-                landed = false;
+                upThrust();
+                return;
             }
+
+            // If there are no upthrust updates, then check to see if the platforms y pos is
+            // within the (Max Distance Before Applying Up Thrust Updates) of the taxi.
+            // If it is, then calculate the no of (Upthrust Updates To Vertical Equilibrium) to
+            // be performed so we we may apply them next time round the loop.
+            if (pickupPlatform.getY() > y - maxDistanceBeforeApplyingUpThrustUpdates) {
+                upthrustUpdatesToVerticalEquilibrium =
+                        (int) Math.ceil(calculateUpthrustUpdatesToVerticalEquilibrium(Math.abs(ySpeed)));
+
+                landed = false;
+                return;
+            }
+
+            // Determine if we require more upThrust bursts.
+//            if (travellingUpDownDirection == Direction.UP) {
+//                // Calculate how many additional upbursts are needed
+//                upthrustUpdatesToVerticalEquilibrium = (int) ((getY() - pickupPlatform.getY()) / (THRUST_UP_ACCEL -
+//                        DIVE_ACCEL));
+//                System.out.println("*** UPBURST !");
+//            }
+
             // Do we need to go down?
-            if (pickupPlatform.getY() < y) {
-                thrusterDirectionDown = true;
-                if (ySpeed > -MAX_SPEED)
-                    ySpeed -= THRUST_DOWN_ACCEL;
-                landed = false;
-            }
+//            if (pickupPlatform.getY() < y) {
+//                thrusterDirectionDown = true;
+//                if (ySpeed > -MAX_SPEED)
+//                    ySpeed -= THRUST_DOWN_ACCEL;
+//                landed = false;
+//            }
             // Do we need to go left?
             // System.out.println("* taxi needs to go left");
             // Do we need to go right?
@@ -345,10 +344,29 @@ public class Taxi {
         }
     }
 
+    /**
+     * Assigns a single upThrust burst to the taxi.
+     */
+    private void upThrust() {
+        thrusterDirectionUp = true;
+        ySpeed += THRUST_UP_ACCEL;
+        upthrustUpdatesToVerticalEquilibrium--;
+    }
+
+    /**
+     * If landing gear is enabled, disable.
+     */
+    private void disableLandingGear() {
+        if (landingGear) {
+            landingGear = !landingGear;
+        }
+    }
+
+
     public static void main(String[] args) {
         Taxi taxi = new Taxi();
         System.out.println("No of updates: " + taxi.calculateUpthrustUpdatesToVerticalEquilibrium(4));
-        System.out.println("Max distance: " + taxi.calculateMaxDistanceBeforeApplyingUpThrustUpdates(4));
+        System.out.println("Max distance: " + taxi.calculateMaxDistanceToTravelWhileApplyingUpThrustUpdates(4));
         System.out.println();
 
         float speed = 5;
@@ -361,22 +379,83 @@ public class Taxi {
         System.out.println("Total Distance is: " + totalDistance);
     }
 
-    private float calculateUpthrustUpdatesToVerticalEquilibrium(float pixels) {
+    /**
+     * Calculates the total no of upthrust updates that need to be applied to the taxi before it reaches 0 or
+     * equilibrium
+     *
+     * @param velocityInPixels
+     * @return
+     */
+    private float calculateUpthrustUpdatesToVerticalEquilibrium(float velocityInPixels) {
+        if (calculateUpThrustDuringClimb())
+            return upthrustUpdatesToVerticalEquilibrium;
 
-        float updates = pixels / THRUST_UP_ACCEL;
-        if (updates < 1)
-            return updates;
-        float remainingDistanceToTravel = updates * DIVE_ACCEL;
-        return updates + calculateUpthrustUpdatesToVerticalEquilibrium(remainingDistanceToTravel);
+        return calculateUpThrustDuringFreeFall(velocityInPixels);
     }
 
-    private float calculateMaxDistanceBeforeApplyingUpThrustUpdates(float pixels) {
+    /**
+     * Determine how many upThrust bursts are required if the taxi is already climbing.
+     *
+     * @return
+     */
+    private boolean calculateUpThrustDuringClimb() {
+        if (travellingUpDownDirection == Direction.UP && upthrustUpdatesToVerticalEquilibrium < 1) {
+            if (pickupPlatform.getY() > getY()) {
+                // We assume that vertical velocity is 0.
+                float distanceToClimb = pickupPlatform.getY() - getY();
+                float tempDistance = 0;
+                int noOfUpdates = 0;
 
-        float updates = pixels / THRUST_UP_ACCEL;
-        float remainingDistanceToTravel = updates * DIVE_ACCEL;
-        if (updates < 1)
-            return remainingDistanceToTravel;
-        return pixels + calculateMaxDistanceBeforeApplyingUpThrustUpdates(remainingDistanceToTravel);
+                while (tempDistance < distanceToClimb) {
+                    tempDistance += tempDistance + (THRUST_UP_ACCEL - DIVE_ACCEL);
+                    noOfUpdates++;
+                }
+
+                upthrustUpdatesToVerticalEquilibrium = noOfUpdates;
+            }
+            System.out.println("*** plaform y - " + pickupPlatform.getY());
+            System.out.println("*** taxi y - " + getY());
+            System.out.println("*** Do we get called for upthrust. " + upthrustUpdatesToVerticalEquilibrium + " - " + travellingUpDownDirection);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determine how many upThrust bursts are required if taxi is going down or free falling.
+     *
+     * @param velocityInPixels
+     * @return
+     */
+    private float calculateUpThrustDuringFreeFall(float velocityInPixels) {
+        float upThrustUpdates = 0;
+        if (travellingUpDownDirection == Direction.DOWN) {
+            upThrustUpdates = (velocityInPixels / (THRUST_UP_ACCEL - DIVE_ACCEL)) + 1;
+            System.out.println("* upthrust FREE FALL " + travellingUpDownDirection + " - " + upThrustUpdates);
+        }
+        return upThrustUpdates;
+    }
+
+    /**
+     * Essentially calculates the perimeter edge or the maximum distance that the taxi has to travel
+     * while constantly applying Up Thrusts before the taxi reaches a speed of 0 or equilibrium.
+     *
+     * @param velocityInPixels
+     * @return
+     */
+    private float calculateMaxDistanceToTravelWhileApplyingUpThrustUpdates(float velocityInPixels) {
+
+        float noOfUpdates = (float) Math.ceil(calculateUpThrustDuringFreeFall(velocityInPixels));
+        float distanceLostOverUpdatesAtConstantVelocity = 0;
+
+        float tempVelocityInPixels = velocityInPixels;
+
+        for (int i = 0; i < noOfUpdates; i++) {
+            distanceLostOverUpdatesAtConstantVelocity += tempVelocityInPixels;
+            tempVelocityInPixels -= (THRUST_UP_ACCEL - DIVE_ACCEL);
+        }
+
+        return distanceLostOverUpdatesAtConstantVelocity;
     }
 
     private void manualControlTaxi() {

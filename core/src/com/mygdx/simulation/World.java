@@ -32,8 +32,8 @@ public class World extends ScreenAdapter {
     private static final float WORLD_WIDTH = 8640;
     private static final float WORLD_HEIGHT = 6480;
 
-    private static final float SCREEN_WIDTH = 1600;
-    private static final float SCREEN_HEIGHT = 900;
+    private static final float SCREEN_WIDTH = 1920;
+    private static final float SCREEN_HEIGHT = 1080;
 
     private final TransportSimulation transportSimulation;
     private Viewport viewport;
@@ -52,6 +52,7 @@ public class World extends ScreenAdapter {
 
     private boolean displayAllLayersFlag = true;
     private boolean pauseFlag = false;
+    private boolean toggleFSFlag = false;
 
     private int simulationSpeed = 1;
     private int setSpeed = 1;
@@ -135,6 +136,7 @@ public class World extends ScreenAdapter {
         toggleMode();
         toggleAutomateTaxi();
         togglePause();
+        fullScreenToggle();
         checkTaxiRequests();
         updateSimulationSpeed(delta);
     }
@@ -423,6 +425,17 @@ public class World extends ScreenAdapter {
         Input input = Gdx.input;
         if (input.isKeyJustPressed(Input.Keys.P)) {
             pauseFlag = !pauseFlag;
+        }
+    }
+
+    private void fullScreenToggle() {
+        Input input = Gdx.input;
+        if (input.isKeyJustPressed(Input.Keys.F)) {
+            if(toggleFSFlag)
+                Gdx.graphics.setWindowedMode(1920, 1080);
+            else
+                Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
+            toggleFSFlag = !toggleFSFlag;
         }
     }
 

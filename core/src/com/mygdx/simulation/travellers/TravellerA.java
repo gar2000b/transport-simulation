@@ -25,7 +25,7 @@ public class TravellerA extends Traveller {
                 Texture.class));
         travellerTextures = new TextureRegion(traveller).split(tileWidth, tileHeight);
 
-        travellerWalkingAnimation = new Animation(FRAME_DURATION, travellerTextures[5][7], travellerTextures[5][8],
+        travellerWalkingAnimation = new Animation<TextureRegion>(FRAME_DURATION, travellerTextures[5][7], travellerTextures[5][8],
                 travellerTextures[5][9], travellerTextures[6][0], travellerTextures[6][1], travellerTextures[6][2],
                 travellerTextures[6][3], travellerTextures[6][4]);
         travellerWalkingAnimation.setPlayMode(Animation.PlayMode.LOOP);

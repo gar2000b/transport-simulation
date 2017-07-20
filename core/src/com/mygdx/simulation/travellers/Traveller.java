@@ -20,7 +20,7 @@ public class Traveller {
     private final World world;
 
     TextureRegion[][] travellerTextures;
-    Animation travellerWalkingAnimation;
+    Animation<TextureRegion> travellerWalkingAnimation;
     TextureRegion travellerToRender;
     Texture thoughtBubble;
     Texture taxiBubble;
